@@ -232,17 +232,17 @@ const CartPage = () => {
               {/* Trust badges */}
               <div className="flex justify-center gap-4 mt-6 pt-4 border-t border-border">
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/80px-Visa_Inc._logo.svg.png"
+                  src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg"
                   alt="Visa"
                   className="h-5 opacity-50"
                 />
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/80px-Mastercard-logo.svg.png"
+                  src="https://upload.wikimedia.org/wikipedia/commons/a/a4/Mastercard_2019_logo.svg"
                   alt="Mastercard"
                   className="h-5 opacity-50"
                 />
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo-vector.svg/80px-UPI-Logo-vector.svg.png"
+                  src="https://upload.wikimedia.org/wikipedia/commons/6/6f/UPI_logo.svg"
                   alt="UPI"
                   className="h-5 opacity-50"
                 />

@@ -53,7 +53,7 @@ const LoginPage = () => {
           <div className="text-center mb-8">
             <Link to="/">
               <h1 className="font-serif text-2xl font-semibold mb-2">
-                Artisan Home
+                AavyaRath
               </h1>
             </Link>
             <h2 className="text-2xl font-semibold">Welcome Back</h2>
@@ -87,7 +87,7 @@ const LoginPage = () => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     data-testid="login-password"
                   />
                   <button
@@ -167,15 +167,6 @@ const LoginPage = () => {
                 Create one
               </Link>
             </p>
-          </div>
-
-          {/* Demo credentials */}
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg text-sm">
-            <p className="font-medium mb-1">Demo Admin Credentials:</p>
-            <p className="text-muted-foreground">
-              Email: admin@artisanhome.com
-            </p>
-            <p className="text-muted-foreground">Password: admin123</p>
           </div>
         </div>
       </div>

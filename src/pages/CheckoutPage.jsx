@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout";
 import { useCart, useAuth, apiClient } from "@/App";
@@ -8,7 +8,25 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Check, CreditCard, Smartphone, Building2, Truck } from "lucide-react";
+import {
+  Check,
+  CreditCard,
+  Smartphone,
+  Building2,
+  Truck,
+  Currency,
+} from "lucide-react";
+
+// ─── Razorpay loader ──────────────────────────────────────────────────────────
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 const CheckoutPage = () => {
   const { cart, clearCart } = useCart();
@@ -47,6 +65,8 @@ const CheckoutPage = () => {
       }
     };
     if (user) fetchAddresses();
+    // Pre-load Razorpay script in background
+    loadRazorpayScript();
   }, [user]);
 
   const handleAddressChange = (e) => {
@@ -115,6 +135,85 @@ const CheckoutPage = () => {
   const tax = Math.round(cart.subtotal * 0.18);
   const total = cart.subtotal + shippingCost + tax - discount;
 
+  // ── Razorpay Payment ─────────────────────────────────────────────────────────
+  const openRazorpay = useCallback(
+    async (order_id, orderAmount) => {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error("Failed to load payment gateway. Please try again.");
+        return false;
+      }
+
+      // Create Payment order on backend
+      let rzyOrder;
+      try {
+        const res = await apiClient.post("/payment/create-order", {
+          amount: Math.round(orderAmount * 100), // Convert to paise
+          order_id: order_id,
+        });
+        rzyOrder = res.data;
+        console.log(rzyOrder);
+        
+      } catch (error) {
+        toast.error("Could not initiate payment. Please try again.");
+        return false;
+      }
+      console.log(process.env.REACT_APP_RAZORPAY_KEY_ID);
+    
+      return new Promise((resolve) => {
+        const options = {
+          key: process.env.REACT_APP_RAZORPAY_KEY_ID || "",
+          amount: rzyOrder.amount,
+          currency: rzyOrder.currency || "INR",
+          name: "AayvaRath",
+          description: "Home Decor Purchase",
+          image: "",
+          order_id: rzyOrder.id,
+          prefill: {
+            name: user?.name || shippingAddress.full_name,
+            email: user?.email || "",
+            contact: shippingAddress.phone || "",
+          },
+          theme: { color: "#7A5A3A" },
+          modal: {
+            ondismiss: () => {
+              toast.error("Payment cancelled");
+              resolve(false);
+            },
+          },
+          handler: async (response) => {
+            try {
+              await apiClient.post("/payment/verify", {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                order_id: order_id,
+              });
+              resolve(true);
+              toast.success("Payment Successful");
+            } catch (error) {
+              toast.error(
+                "Payment verification failed. Please contact support.",
+              );
+              resolve(false);
+            }
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", (response) => {
+          toast.error(
+            response.error?.description || "Payment failed. Please try again.",
+          );
+          resolve(false);
+        });
+        rzp.open();
+      });
+    },
+    [user, shippingAddress],
+  );
+
+  // ── Place Order ──────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!agreedToTerms) {
       toast.error("Please agree to the terms and conditions");
@@ -145,37 +244,20 @@ const CheckoutPage = () => {
         // Cash on Delivery - order placed directly
         clearCart();
         navigate(`/order-confirmation/${order_id}`);
-      } else {
-        // Razorpay payment
-        try {
-          const paymentResponse = await apiClient.post(
-            "/payment/create-order",
-            {
-              amount: Math.round(orderTotal * 100), // Convert to paise
-              order_id: order_id,
-            },
-          );
+        return;
+      }
 
-          // Load Razorpay (mock for now since we don't have keys)
-          // In production, this would open the Razorpay modal
-
-          // For demo, simulate successful payment
-          await apiClient.post("/payment/verify", {
-            razorpay_order_id: paymentResponse.data.id,
-            razorpay_payment_id: `pay_${Date.now()}`,
-            razorpay_signature: "mock_signature",
-            order_id: order_id,
-          });
-
-          clearCart();
-          navigate(`/order-confirmation/${order_id}`);
-        } catch (paymentError) {
-          toast.error("Payment failed. Please try again.");
-        }
+      // Online payment - open Razorpay
+      const paid = await openRazorpay(order_id, orderTotal);
+      if (paid) {
+        clearCart();
+        navigate(`/order-confirmation/${order_id}`);
       }
     } catch (error) {
-      console.error("Order error:", error);
-      toast.error(error.response?.data?.detail || "Failed to place order");
+      toast.error(
+        error.response?.data?.detail ||
+          "Failed to place order. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
