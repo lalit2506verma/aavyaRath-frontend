@@ -330,4 +330,4 @@ This project is for educational and personal use. All product images sourced fro
 
 ---
 
-*Built with ❤️ for AavyaRath · Faridabad, Haryana, India*
+*Built with ❤️ for AavyaRath Home Decor· Faridabad, Haryana, India*
